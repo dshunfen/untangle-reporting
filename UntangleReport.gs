@@ -21,7 +21,7 @@ function sendReport() {
   const [domainHitsData, rawData, searchData, tempUnblockedData, hostsByCategoryData] = getQueryData();
   const searchDataUniq = dedupeSearchData(searchData);
   const htmlReportData = [searchDataUniq, tempUnblockedData];
-  emailReport(hostsByCategoryData, htmlReportData, domainHitsData, rawData, NETWORK_NAME + "Network Report for " + getHumanDate(reportDate));
+  emailReport(hostsByCategoryData, htmlReportData, domainHitsData, rawData, NETWORK_NAME + " Network Report for " + getHumanDate(reportDate));
 }
 
 function checkSentAndInitialize() {
@@ -207,7 +207,7 @@ function getQueryData() {
 
 function emailReport(hostsByCategory, dataList, domainHitsData, rawData, subject) {
   let email = {
-    name: NETWORK_NAME + "Untangle",
+    name: NETWORK_NAME + " Untangle",
     to: REPORT_RECIPIENTS,
     subject: subject,
     attachments: [convertToExcel(subject, domainHitsData, rawData)],
