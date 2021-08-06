@@ -2,7 +2,7 @@
 const NETWORK_NAME = '<Your network name>';
 const REPORT_RECIPIENTS = "<Your list of email recipients>";
 const HIGH_SEVERITY_PARENT_CATEGORIES = ['Sensitive', 'Security'];
-const HIGH_SEVERITY_CHILDREN_CATEGORIES = ['Shopping', 'Uncategorized', 'Streaming Media', 'News and Media', 'Social Networking'];
+const HIGH_SEVERITY_CHILDREN_CATEGORIES = ['Shopping', 'Uncategorized', 'Streaming Media', 'News and Media', 'Social Networking', 'Fashion and Beauty', 'Entertainment and Arts', 'Society', 'Internet Portals'];
 
 // Globals
 const TEMP_REPORT_FOLDER = 'Temporary Report Data';
@@ -134,7 +134,7 @@ function getQueryData() {
       // Build our map back again
       domainHitDetailsMap[domain] = domainHitDetails;
       hostDomainDetailsMap[machine] = domainHitDetailsMap;
-      
+
       const isDomainCategorized = Boolean(Number(domainCategoryMap[domain]));
       const isGoodCategory = Boolean(Number(web_filter_category_id));
       if(!isDomainCategorized) {
@@ -180,7 +180,7 @@ function getQueryData() {
   const hostsByCategoryData = Object.entries(hostsByCategoryMap).map(([webCatId, machineAndDomains]) => {
     const categoryDetails = getFilterReason('D', webCatId);
     let severity = 0;
-    if((HIGH_SEVERITY_PARENT_CATEGORIES.includes(categoryDetails.category) 
+    if((HIGH_SEVERITY_PARENT_CATEGORIES.includes(categoryDetails.category)
         || HIGH_SEVERITY_CHILDREN_CATEGORIES.includes(categoryDetails.name))
         && categoryDetails.name !== 'Religion') {
       severity = 2;
@@ -198,11 +198,11 @@ function getQueryData() {
   const hostsByCategoryHeaders = ['Category', 'Hosts'];
 
   const searchHeaders = ['Date', 'Host', 'Site', 'Search'];
-  return [new Data(domainHitHeaders, domainHitData, "Summary"), 
+  return [new Data(domainHitHeaders, domainHitData, "Summary"),
           new Data(allDataHeaders, allDataContent, "Data"),
           new Data(searchHeaders, searchDataRaw, "Search Report"),
           new Data(['Site'], [...temporarilyUnblocked].map(domain => [domain]), "Temporarily Unblocked"),
-          new Data(hostsByCategoryHeaders, hostsByCategoryData, "Hosts by Category")];
+          new Data(hostsByCategoryHeaders, hostsByCategoryData, "Site Visits by Category")];
 }
 
 function emailReport(hostsByCategory, dataList, domainHitsData, rawData, subject) {
@@ -213,7 +213,7 @@ function emailReport(hostsByCategory, dataList, domainHitsData, rawData, subject
     attachments: [convertToExcel(subject, domainHitsData, rawData)],
     htmlBody: convertToHtml(hostsByCategory, dataList)
   };
-  
+
   MailApp.sendEmail(email);
   Logger.log("Sent \"%s\"", subject);
 
@@ -323,7 +323,7 @@ function findInReportsFolder(namePart) {
     const file = files.next();
     if(file.getName().includes(namePart)) {
       return file;
-    } 
+    }
   }
   Logger.log("No filename containing " + namePart + " exists in the report folder");
 }
@@ -510,7 +510,7 @@ function convertToExcel(subject, domainHitsData, rawData) {
     headers     : {"Authorization": "Bearer " + ScriptApp.getOAuthToken()},
     muteHttpExceptions: true
   };
-  return UrlFetchApp.fetch(url, params).getBlob().setName(reportSheet.getName() + ".xlsx");      
+  return UrlFetchApp.fetch(url, params).getBlob().setName(reportSheet.getName() + ".xlsx");
 }
 
 SEVERITY_COLORS = {
@@ -530,7 +530,7 @@ function convertToHtml(hostsByCategory, dataList) {
 
 /**
  * From https://stackoverflow.com/questions/33787057/how-to-set-a-sheets-number-of-rows-and-columns-at-creation-time-and-a-word-ab
- * 
+ *
  * Wrapper for Spreadsheet.insertSheet() method to support customization.
  * All parameters are optional & positional.
  *

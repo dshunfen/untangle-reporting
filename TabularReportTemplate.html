@@ -37,11 +37,6 @@ small {
     font-size: 80%
 }
 
-[type="number"]::-webkit-inner-spin-button,
-[type="number"]::-webkit-outer-spin-button {
-    height: auto
-}
-
 
 html,
 body {
@@ -150,7 +145,7 @@ body ::-webkit-scrollbar-thumb:hover {
 }
 
 .ui.header .ui.label {
-    font-size: '';
+    font-size: inherit;
     margin-left: 0.5rem;
     vertical-align: middle
 }
@@ -256,7 +251,6 @@ a.ui.label {
     margin-top: -0.29165em
 }
 
-
 a.ui.label:hover {
     background-color: #E0E0E0;
     border-color: #E0E0E0;
@@ -355,62 +349,6 @@ a.ui.ui.ui.black.label:hover {
 
 .ui.small.label {
     font-size: 0.78571429rem
-}
-
-
-
-.ui.list {
-    list-style-type: none;
-    margin: 1em 0;
-    padding: 0 0
-}
-
-
-.ui.list:first-child {
-    margin-top: 0;
-    padding-top: 0
-}
-
-
-.ui.list:last-child {
-    margin-bottom: 0;
-    padding-bottom: 0
-}
-
-
-.ui.list .list:not(.icon) {
-    clear: both;
-    margin: 0;
-    padding: 0.75em 0 0.25em 0.5em
-}
-
-.ui.horizontal.list {
-    display: inline-block;
-    font-size: 0
-}
-
-.ui.horizontal.list .list:not(.icon) {
-    padding-left: 0;
-    padding-bottom: 0
-}
-
-
-.ui.celled.list > .list {
-    border-top: 1px solid rgba(34, 36, 38, 0.15);
-    padding-left: 0.5em;
-    padding-right: 0.5em
-}
-
-.ui.horizontal.celled.list {
-    margin-left: 0
-}
-
-.ui.list {
-    font-size: 1em
-}
-
-.ui.small.list {
-    font-size: 0.92857143em
 }
 
 
@@ -557,11 +495,6 @@ span.ui.small.text {
     background-color: rgba(0, 0, 50, 0.02)
 }
 
-.ui.table[class*="single line"],
-.ui.table [class*="single line"] {
-    white-space: nowrap
-}
-
 .ui.red.table {
     border-top: 0.2em solid #DB2828
 }
@@ -668,7 +601,52 @@ span.ui.small.text {
   </head>
   <body>
     <h2><?= hostsByCategory.name ?></h2>
-    <table class="ui celled very compact single line table">
+    <table class="ui celled very compact collapsing table" style="margin-left: auto">
+      <thead class="full-width">
+          <tr>
+              <th colspan="2">Legend</th>
+          </tr>
+      </thead>
+      <tbody>
+          <tr>
+              <td>
+                  <div style="display: block">
+                      <span class="ui small black header">Category of website</span>
+                      <table class="ui very compact collapsing small fixed table" style="margin-top: 10px; margin-bottom: 10px">
+                          <thead class="full-width" style="">
+                              <tr>
+                                  <th colspan="3" style="padding: .5em .5em">Severities</th>
+                              </tr>
+                          </thead>
+                          <tbody>
+                              <tr>
+                                  <td class="red">High</td>
+                                  <td class="yellow">Medium</td>
+                                  <td class="green">Low</td>
+                              </tr>
+                          </tbody>
+                      </table>
+                      <span class="ui small text">(High and Medium are blocked)</span>
+                  </div>
+              </td>
+              <td>
+                  <div>
+                      <table class="ui very compact collapsing small fixed table">
+                          <thead>
+                              <tr><th class="compact">Machine Name</th></tr>
+                          </thead>
+                          <tbody>
+                              <tr><td><div class="ui horizontal small label red">Red means all were blocked</div></td></tr>
+                              <tr><td><div class="ui horizontal small label orange">Orange means some were blocked</div></td></tr>
+                              <tr><td><div class="ui horizontal small label">"Referred" means all were indirect<div class="detail">Referred</div></div></td></tr>
+                          </tbody>
+                      </table>
+                  </div>
+              </td>
+          <tr>
+      </tbody>
+  </table>
+    <table class="ui celled very compact table">
       <thead><tr>
         <? for (const header of hostsByCategory.headers) { ?>
           <th><?= header ?></th>
@@ -719,7 +697,7 @@ span.ui.small.text {
             <? for (const [j, cell] of row.entries()) { ?>
               <td>
                 <? if (data.name === 'Search Report' && j == 1) { ?>
-                  <div class="ui horizonal small label" style="background-color: <?!= getPastelHsl(cell) ?>"><?= cell ?></div>
+                  <div class="ui horizontal small label" style="background-color: <?!= getPastelHsl(cell) ?>"><?= cell ?></div>
                 <? } else  { ?>
                   <?= cell ?>
                 <? } ?>
