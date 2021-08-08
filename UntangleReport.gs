@@ -3,6 +3,7 @@ const NETWORK_NAME = '<Your network name>';
 const REPORT_RECIPIENTS = "<Your list of email recipients>";
 const HIGH_SEVERITY_PARENT_CATEGORIES = ['Sensitive', 'Security'];
 const HIGH_SEVERITY_CHILDREN_CATEGORIES = ['Shopping', 'Uncategorized', 'Streaming Media', 'News and Media', 'Social Networking', 'Fashion and Beauty', 'Entertainment and Arts', 'Society', 'Internet Portals'];
+const DOMAIN_CATEGORY_OVERRIDES = [{categoryName: 'Proxy Avoidance and Anonymizers', inclusion: 'vpn.'}];
 
 // Globals
 const TEMP_REPORT_FOLDER = 'Temporary Report Data';
@@ -91,6 +92,8 @@ function getQueryData() {
   let domainCategoryMap = {};
   const ipNameMap = getNetworkNameMap(findInReportsFolder(NETWORK_CONF_FILENAME).getBlob());
   const ruleMap = getRuleMappings(findInReportsFolder(WEBFILTER_CONF_FILENAME).getBlob());
+  const searchTools = searchToolSetup();
+  const categoryByName = invert(ruleMap['D'], "name");
   function getFilterReason(filter_type, ruleId) {
     const filterList = ruleMap[filter_type];
     if(filterList) {
@@ -109,6 +112,15 @@ function getQueryData() {
       const machine = ipNameMap[c_client_addr] || hostname;
       domain = domain.startsWith('www.') ? domain.replace('www.', '') : domain;
       let rule = '';
+      // Assign a specific category to/override to a given domain(s)
+      if(searchTools.SEARCH_CAT_OVERRIDE_TESTS.test(domain)) {
+        for(const domainTest of DOMAIN_CATEGORY_OVERRIDES) {
+          if(domain.includes(domainTest.inclusion)) {
+            web_filter_reason, web_filter_rule_id = "D";
+            web_filter_category_id = categoryByName[domainTest.categoryName];
+          }
+        }
+      }
       if(Number(web_filter_rule_id)) {
         const filterReason = getFilterReason(web_filter_reason, web_filter_rule_id);
         if(web_filter_reason === 'D' && filterReason.name) {
@@ -119,7 +131,7 @@ function getQueryData() {
       }
 
       // COMPILE SEARCH DATA
-      [provider, searchTerm] = checkForSearchQuery(domain, uri);
+      [provider, searchTerm] = checkForSearchQuery(domain, uri, searchTools);
       if(searchTerm) {
         searchDataRaw.push([time_stamp, c_client_addr, hostname, provider, searchTerm]);
       }
@@ -136,9 +148,9 @@ function getQueryData() {
       hostDomainDetailsMap[machine] = domainHitDetailsMap;
 
       const isDomainCategorized = Boolean(Number(domainCategoryMap[domain]));
-      const isGoodCategory = Boolean(Number(web_filter_category_id));
+      const isValidCategory = Boolean(Number(web_filter_category_id));
       if(!isDomainCategorized) {
-        domainCategoryMap[domain] = isGoodCategory ? web_filter_category_id : "0";
+        domainCategoryMap[domain] = isValidCategory ? web_filter_category_id : "0";
       }
 
       // COMPILE TEMPORARY UNBLOCKED
@@ -168,7 +180,7 @@ function getQueryData() {
           // COMPILE HOSTS BY CATEGORY
           hostsByCategoryMap[webCatId] = hostsByCategoryMap[webCatId] || {};
           hostsByCategoryMap[webCatId][machine] = hostsByCategoryMap[webCatId][machine] || {};
-          const rootDomain = getRootDomain(domain);
+          const rootDomain = getRootDomain(domain, searchTools);
           const domainHitDetails = hostsByCategoryMap[webCatId][machine][rootDomain] || {};
           domainHitDetails.hits = domainHitDetails.hits + details.hits || details.hits;
           domainHitDetails.referred = domainHitDetails.referred + details.referred || details.referred;
@@ -240,7 +252,7 @@ function removeOldFiles() {
 
 
 // --------------- UTILITIES -----------------
-function searchTools() {
+function searchToolSetup() {
   const SEARCH_DEFINITIONS = [
     new SearchDefinition('amazon\\.', 'Amazon', '.*amazon\\.[a-z]+(\\.[a-z]+)?/.*(\\?|&)k(eywords)?=(?<query>[^&]+).*'),
     new SearchDefinition('duckduckgo\\.', 'DuckDuckGo', '.*duckduckgo\\.[a-z]+(\\.[a-z]+)?/(?!ac/).*(\\?|&)q=(?<query>[^&]+).*'),
@@ -254,7 +266,16 @@ function searchTools() {
     // new SearchDefinition('yahoo', 'Yahoo', '.*yahoo\\.[a-z]+(\\.[a-z]+)?/search.*(\\?|&)p=(?<query>[^&]+).*'),
   ];
   const SEARCH_HOSTNAME_TESTS = new RegExp(`(${[...new Set(SEARCH_DEFINITIONS.map(searchDef => searchDef.host))].join('|')})`);
-  return [SEARCH_DEFINITIONS, SEARCH_HOSTNAME_TESTS];
+  const SEARCH_CAT_OVERRIDE_TESTS = new RegExp(`(${[...new Set(DOMAIN_CATEGORY_OVERRIDES.map(searchDef => searchDef.inclusion))].join('|')})`);
+  return new SearchTools(SEARCH_DEFINITIONS, SEARCH_HOSTNAME_TESTS, SEARCH_CAT_OVERRIDE_TESTS);
+}
+
+class SearchTools {
+  constructor(SEARCH_DEFINITIONS, SEARCH_HOSTNAME_TESTS, SEARCH_CAT_OVERRIDE_TESTS) {
+    this.SEARCH_DEFINITIONS = SEARCH_DEFINITIONS;
+    this.SEARCH_HOSTNAME_TESTS = SEARCH_HOSTNAME_TESTS;
+    this.SEARCH_CAT_OVERRIDE_TESTS = SEARCH_CAT_OVERRIDE_TESTS;
+  }
 }
 
 class Data {
@@ -291,11 +312,10 @@ function testSearchQueries() {
 }
 
 // Search for searches
-function checkForSearchQuery(host, uri) {
-  const [SEARCH_DEFINITIONS, SEARCH_HOSTNAME_TESTS] = searchTools();
+function checkForSearchQuery(host, uri, searchTools) {
   let searchTerm;
-  if(SEARCH_HOSTNAME_TESTS.test(host)) {
-    for(const searchDef of SEARCH_DEFINITIONS) {
+  if(searchTools.SEARCH_HOSTNAME_TESTS.test(host)) {
+    for(const searchDef of searchTools.SEARCH_DEFINITIONS) {
       [provider, searchTerm] = searchDef.findSearch(host + uri);
       if(searchTerm) {
         return [provider, searchTerm];
@@ -341,6 +361,15 @@ function createSpreadsheetInFolder(spreadsheetName, folder) {
     var newfile = DriveApp.getFileById(spreadsheet.getId());
     newfile.moveTo(folder)
     return spreadsheet;
+}
+
+function invert(obj, valueObjectKey) {
+  var result = {};
+  var _keys = Object.keys(obj);
+  for (var i = 0, length = _keys.length; i < length; i++) {
+    result[obj[_keys[i]][valueObjectKey]] = _keys[i];
+  }
+  return result;
 }
 
 function getDateFromFilename(fileName) {
@@ -445,11 +474,11 @@ function chooseBestForUncategorized(domain, domainCategoryMap) {
   return bestWebCategory;
 }
 
-function getRootDomain(domain) {
+function getRootDomain(domain, searchTools) {
   const splitDomain = domain.split('.');
   if(splitDomain.length > 2) {
     const top2 = splitDomain.slice(-2).join('.');
-    if(top2.length < 11) {
+    if(top2.length < 11 || searchTools.SEARCH_CAT_OVERRIDE_TESTS.test(domain)) {
       return splitDomain.slice(-3).join('.');
     } else {
       return top2;
@@ -518,6 +547,16 @@ SEVERITY_COLORS = {
   1: 'yellow',
   2: 'red',
 };
+function blockColor(hits, blocked, domain) {
+  if(blocked > 0) {
+    if(hits == blocked) {
+      return 'red';
+    } else {
+      return 'orange';
+    }
+  }
+  return 'green';
+}
 
 function convertToHtml(hostsByCategory, dataList) {
   let reportTemplate = HtmlService.createTemplateFromFile('TabularReportTemplate');
@@ -525,6 +564,7 @@ function convertToHtml(hostsByCategory, dataList) {
   reportTemplate.hostsByCategory = hostsByCategory;
   reportTemplate.getPastelHsl = getPastelHsl;
   reportTemplate.severityColors = SEVERITY_COLORS;
+  reportTemplate.blockColor = blockColor;
   return reportTemplate.evaluate().getContent();
 }
 
