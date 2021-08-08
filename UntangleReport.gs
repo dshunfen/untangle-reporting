@@ -547,7 +547,7 @@ SEVERITY_COLORS = {
   1: 'yellow',
   2: 'red',
 };
-function blockColor(hits, blocked, domain) {
+function blockColor(hits, blocked) {
   if(blocked > 0) {
     if(hits == blocked) {
       return 'red';

@@ -665,7 +665,7 @@ span.ui.small.text {
                   <tbody>
                     <? for (const [domain, {hits, referred, blocked}] of Object.entries(domains)) { ?>
                       <tr><td>
-                        <div class="ui horizontal small label <?= blockColor(hits, blocked, domain) ?>"><?= domain ?>
+                        <div class="ui horizontal small label <?= blockColor(hits, blocked) ?>"><?= domain ?>
                           <? if(hits - referred == 0) { ?><div class="detail">Referred</div><? } ?>
                         </div>
                       </td></tr>
