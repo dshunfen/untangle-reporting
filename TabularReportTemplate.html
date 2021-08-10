@@ -659,7 +659,7 @@ span.ui.small.text {
             <td><span class="ui small black header"><?= categoryName ?></span></td>
             <td style="display: flex">
             <? for (const [machine, domains] of Object.entries(machines)) { ?>
-              <? if(severity == 2) { ?>
+              <? if([2,1].includes(severity)) { ?>
                 <div><table class="ui very compact collapsing small fixed table">
                   <thead><tr><th class="compact" style="background-color: <?!= getPastelHsl(machine) ?>"><?= machine ?></th></tr></thead>
                   <tbody>
