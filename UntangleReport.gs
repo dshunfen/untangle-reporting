@@ -2,7 +2,8 @@
 const NETWORK_NAME = '<Your network name>';
 const REPORT_RECIPIENTS = "<Your list of email recipients>";
 const HIGH_SEVERITY_PARENT_CATEGORIES = ['Sensitive', 'Security'];
-const HIGH_SEVERITY_CHILDREN_CATEGORIES = ['Shopping', 'Uncategorized', 'Streaming Media', 'News and Media', 'Social Networking', 'Fashion and Beauty', 'Entertainment and Arts', 'Society', 'Internet Portals'];
+const HIGH_SEVERITY_CHILDREN_CATEGORIES = ['Uncategorized', 'Streaming Media', 'Social Networking', 'Fashion and Beauty', 'Entertainment and Arts', 'Internet Portals'];
+const MEDIUM_SEVERITY_CHILDREN_CATEGORIES = ['Society', 'Personal sites and Blogs', 'Shopping', 'News and Media'];
 const DOMAIN_CATEGORY_OVERRIDES = [{categoryName: 'Proxy Avoidance and Anonymizers', inclusion: 'vpn.'}];
 
 // Globals
@@ -196,7 +197,7 @@ function getQueryData() {
         || HIGH_SEVERITY_CHILDREN_CATEGORIES.includes(categoryDetails.name))
         && categoryDetails.name !== 'Religion') {
       severity = 2;
-    } else if(categoryDetails.blocked || ['Society', 'Personal sites and Blogs'].includes(categoryDetails.name)) {
+    } else if(categoryDetails.blocked || MEDIUM_SEVERITY_CHILDREN_CATEGORIES.includes(categoryDetails.name)) {
       severity = 1
     }
     return [severity, categoryDetails.name, machineAndDomains];
@@ -452,7 +453,7 @@ function getRuleMappings(ruleConfig) {
   let ruleMappings = {};
   Object.entries(WEB_REASONS).forEach(([reasonKey, {reason, configId}]) => {
     if(configId) {
-      ruleMappings[reasonKey] = Object.fromEntries(ruleDefs[configId].list.map((rule, i) => [rule.id || i, {blocked: rule.blocked, description: rule.description, category: rule.category, name: rule.name}]));
+      ruleMappings[reasonKey] = Object.fromEntries(ruleDefs[configId].list.map((rule, i) => [rule.id || i + 1, {blocked: rule.blocked, description: rule.description, category: rule.category, name: rule.name}]));
     }
   });
   return ruleMappings;
