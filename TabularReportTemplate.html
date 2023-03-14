@@ -655,6 +655,7 @@ span.ui.small.text {
         </tr></thead>
       <tbody>
       <? for (const [severity, categoryName, machines] of hostsByCategory.content) { ?>
+        <? if([2,1].includes(severity)) { ?>
           <tr class="<?= severityColors[severity] ?>">
             <td><span class="ui small black header"><?= categoryName ?></span></td>
             <td style="display: flex">
@@ -678,6 +679,7 @@ span.ui.small.text {
             <? } ?>
             </td>
           <tr>
+        <? } ?>
       <? } ?>
       </tbody>
     </table>
