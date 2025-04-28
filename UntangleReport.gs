@@ -2,14 +2,15 @@
 const NETWORK_NAME = '<Your network name>';
 const REPORT_RECIPIENTS = "<Your list of email recipients>";
 const HIGH_SEVERITY_PARENT_CATEGORIES = ['Sensitive', 'Security'];
-const HIGH_SEVERITY_CHILDREN_CATEGORIES = ['Uncategorized', 'Streaming Media', 'Social Networking', 'Fashion and Beauty', 'Entertainment and Arts', 'Internet Portals'];
-const MEDIUM_SEVERITY_CHILDREN_CATEGORIES = ['Society', 'Personal sites and Blogs', 'Shopping', 'News and Media'];
+const HIGH_SEVERITY_CHILDREN_CATEGORIES = ['Shopping', 'Uncategorized', 'Streaming Media', 'News and Media', 'Social Networking', 'Fashion and Beauty', 'Entertainment and Arts', 'Internet Portals'];
+const MEDIUM_SEVERITY_CHILDREN_CATEGORIES = ['Society', 'Personal sites and Blogs'];
 const DOMAIN_CATEGORY_OVERRIDES = [{categoryName: 'Proxy Avoidance and Anonymizers', inclusion: 'vpn.'}];
+const FULL_DISPLAY_DOMAINS = new RegExp(`(youtube|live.com)`);
 
 // Globals
 const TEMP_REPORT_FOLDER = 'Temporary Report Data';
-const REPORTS_BACKUPS_FOLDER = 'Reports Backups';
-const CONFIG_BACKUPS_FOLDER = 'Configuration Backups';
+const REPORTS_BACKUPS_FOLDER = 'Untangle Backups/Reports Backups';
+const CONFIG_BACKUPS_FOLDER = 'Untangle Backups/Configuration Backups';
 const REPORT_DATE_FILENAME = 'report_date.txt';
 const CONFIRMED_SENT_FILENAME = 'confirmed_sent.txt';
 const NETWORK_CONF_FILENAME = 'network.js';
@@ -29,7 +30,7 @@ function sendReport() {
 function checkSentAndInitialize() {
   const reportFolder = getReportFolder();
   // Find the latest report contents date
-  const latestReportFile = getLatestInFolder('Reports Backups', 'reports_csv');
+  const latestReportFile = getLatestInFolder(REPORTS_BACKUPS_FOLDER, 'reports_csv');
   const latestReportDate = getDateFromFilename(latestReportFile);
   if(reportFolder) {
     const currentReportDate = new Date(findInReportsFolder(REPORT_DATE_FILENAME).getBlob().getDataAsString());
@@ -400,30 +401,36 @@ function inverse(obj){
   }
   return retobj;
 }
+function getLatestInFolder(folderPath, nameContains) {
+  const pathParts = folderPath.split('/');
+  let currentFolder = DriveApp.getRootFolder();
 
-function getLatestInFolder(folderName, nameContains) {
-  const folders = DriveApp.getFoldersByName(folderName);
-  while (folders.hasNext()) {
-    const reportsFolder = folders.next();
-    const reportsFiles = reportsFolder.getFiles();
-    let latestFile = undefined;
-    while (reportsFiles.hasNext()) {
-      let reportFile = reportsFiles.next();
-      if(reportFile.getName().includes(nameContains)) {
-        if(!latestFile){
-          latestFile = reportFile;
-        }
-        if(reportFile.getDateCreated().getTime() > latestFile.getDateCreated().getTime()) {
-          latestFile = reportFile;
-        }
+  for (const part of pathParts) {
+    const folders = currentFolder.getFoldersByName(part);
+    if (!folders.hasNext()) {
+      throw new Error(`Folder "${part}" not found in path "${currentFolder}"`);
+    }
+    currentFolder = folders.next();
+  }
+
+  const files = currentFolder.getFiles();
+  let latestFile = null;
+
+  while (files.hasNext()) {
+    const file = files.next();
+    if (file.getName().includes(nameContains)) {
+      if (!latestFile || file.getDateCreated().getTime() > latestFile.getDateCreated().getTime()) {
+        latestFile = file;
       }
     }
-    if(latestFile) {
-      Logger.log('Latest log file found: %s, created: %s', latestFile.getName(), latestFile.getDateCreated());
-      return latestFile;
-    }
   }
-  throw Error('No ' + nameContains + ' files exist in the Untangle backup folder');
+
+  if (latestFile) {
+    Logger.log('Latest file found: %s, created: %s', latestFile.getName(), latestFile.getDateCreated());
+    return latestFile;
+  }
+
+  throw new Error(`No file containing "${nameContains}" found in folder path "${folderPath}"`);
 }
 
 function parseCsvRows(csvBlob) {
@@ -436,7 +443,7 @@ function parseCsvRows(csvBlob) {
 }
 
 function extractConfigs(configNames) {
-  const latestConfTarGz = getLatestInFolder('Configuration Backups', 'configuration_backup');
+  const latestConfTarGz = getLatestInFolder(CONFIG_BACKUPS_FOLDER, 'configuration_backup');
 
   const latestNestedFilesTarGz = getFilesInTarGz(latestConfTarGz).find(fileRef => fileRef.file.getName().includes('files')).file;
   const configFiles = getFilesInTarGz(latestNestedFilesTarGz);
@@ -479,7 +486,7 @@ function getRootDomain(domain, searchTools) {
   const splitDomain = domain.split('.');
   if(splitDomain.length > 2) {
     const top2 = splitDomain.slice(-2).join('.');
-    if(top2.length < 11 || searchTools.SEARCH_CAT_OVERRIDE_TESTS.test(domain)) {
+    if(top2.length < 11 || searchTools.SEARCH_CAT_OVERRIDE_TESTS.test(domain) || FULL_DISPLAY_DOMAINS.test(domain)) {
       return splitDomain.slice(-3).join('.');
     } else {
       return top2;
@@ -695,3 +702,4 @@ function getFilesInTarGz(tarGzFile) {
     });
   return [].concat(...foundFilesArr);
 }
+
