@@ -1,6 +1,20 @@
 // Configuration
 const NETWORK_NAME = '<Your network name>';
 const REPORT_RECIPIENTS = "<Your list of email recipients>";
+
+const SMS_GATEWAY_RECIPIENTS = [
+  '7039159886@vtext.com', '4439802053@vtext.com'
+];
+const TEXT_GATEWAY_EMAIL_MAP = {
+  'mypixmessages.com': 'vtext.com'
+};
+const SMS_CATEGORIES = new Set([
+    'Cult and Occult', 'Abused Drugs', 'Adult and Pornography', 'Dating', 'Sex Education', 'Gambling', 'Translation', 'Marijuana', 'Hacking', 'Weapons', 'Swimsuits and Intimate Apparel', 'Questionable', 'Hate and Racism', 'Violence', 'Cheating', 'Gross', 'Nudity', 'Illegal', 'Abortion', 'Parked Domains', 'Alcohol and Tobacco', 'Image and Video Search', 'Self Harm', 'Low-THC Cannabis Products', 'Fashion and Beauty'
+  ]);
+const SMS_EMAIL_SUBJECT = 'Internet Alert';
+const SMS_ALERT_FILENAME = 'internet_sms_report.txt';
+const SMS_MAX_CHARS = 140;
+
 const HIGH_SEVERITY_PARENT_CATEGORIES = ['Sensitive', 'Security'];
 const HIGH_SEVERITY_CHILDREN_CATEGORIES = ['Shopping', 'Uncategorized', 'Streaming Media', 'News and Media', 'Social Networking', 'Fashion and Beauty', 'Entertainment and Arts', 'Internet Portals'];
 const MEDIUM_SEVERITY_CHILDREN_CATEGORIES = ['Society', 'Personal sites and Blogs'];
@@ -18,13 +32,30 @@ const WEBFILTER_CONF_FILENAME = 'settings_5.js';
 
 function sendReport() {
   const reportDate = checkSentAndInitialize();
-  if(!reportDate) {
-    return;
-  }
-  const [domainHitsData, rawData, searchData, tempUnblockedData, hostsByCategoryData] = getQueryData();
+  if (!reportDate) return;
+
+  const [
+    domainHitsData,
+    rawData,
+    searchData,
+    tempUnblockedData,
+    hostsByCategoryData
+  ] = getQueryData();
+
+  // write the severity=0 file here, so we only compute once
+  generateSeverityZeroFile(hostsByCategoryData.content);
+
+  return
+
   const searchDataUniq = dedupeSearchData(searchData);
   const htmlReportData = [searchDataUniq, tempUnblockedData];
-  emailReport(hostsByCategoryData, htmlReportData, domainHitsData, rawData, NETWORK_NAME + " Network Report for " + getHumanDate(reportDate));
+  emailReport(
+    hostsByCategoryData,
+    htmlReportData,
+    domainHitsData,
+    rawData,
+    NETWORK_NAME + ' Network Report for ' + getHumanDate(reportDate)
+  );
 }
 
 function checkSentAndInitialize() {
@@ -515,6 +546,90 @@ const getPastelHsl = str => {
   return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
 };
 
+// --------------- SMS Helpers -----------------------
+
+function generateSeverityZeroFile(hostsByCategoryData) {
+  const reportFolder = getReportFolder();
+
+  const oldFiles = reportFolder.getFilesByName(SMS_ALERT_FILENAME);
+  while (oldFiles.hasNext()) {
+    oldFiles.next().setTrashed(true);
+  }
+
+  const rows = Array.isArray(hostsByCategoryData.content)
+    ? hostsByCategoryData.content
+    : hostsByCategoryData;
+
+  const categoryMap = {};
+
+  rows
+    .filter(([severity, categoryName]) =>
+      severity === 0 && SMS_CATEGORIES.has(categoryName)
+    )
+    .forEach(([, categoryName, machineMap]) => {
+      // Ensure category bucket exists
+      if (!categoryMap[categoryName]) {
+        categoryMap[categoryName] = {};
+      }
+
+      Object.entries(machineMap).forEach(([machine, domains]) => {
+        // Initialize this machine’s Set if needed
+        if (!categoryMap[categoryName][machine]) {
+          categoryMap[categoryName][machine] = new Set();
+        }
+
+        // Map each domain to its last-two labels
+        Object.keys(domains).forEach(fullDomain => {
+          const parts = fullDomain.split('.');
+          const primary = parts.slice(-2).join('.');
+          categoryMap[categoryName][machine].add(primary);
+        });
+      });
+    });
+
+  const lines = [];
+  Object.entries(categoryMap).forEach(([categoryName, machines]) => {
+    lines.push(categoryName);
+    Object.entries(machines).forEach(([machine, domainSet]) => {
+      const domainList = Array.from(domainSet).join(', ');
+      lines.push(`  ${machine} - ${domainList}`);
+    });
+  });
+
+  reportFolder.createFile(SMS_ALERT_FILENAME, lines.join('\n'));
+}
+
+function sendSeverityZeroAlerts() {
+  const reportFolder = getReportFolder();
+  const files = reportFolder.getFilesByName(SMS_ALERT_FILENAME);
+  if (!files.hasNext()) {
+    Logger.warn('No internet alert report found – nothing to send.');
+    return;
+  }
+
+  const content = files.next().getBlob().getDataAsString();
+  if (!content.trim()) {
+    Logger.info('Alert report is empty – skipping send.');
+    return;
+  }
+
+  const chunks = [];
+  for (let i = 0; i < content.length; i += SMS_MAX_CHARS) {
+    chunks.push(content.substr(i, SMS_MAX_CHARS));
+  }
+
+  SMS_GATEWAY_RECIPIENTS.forEach(originalTo => {
+    const [localPart, domain] = originalTo.split('@');
+    const gatewayDomain = TEXT_GATEWAY_EMAIL_MAP[domain] || domain;
+    const to = `${localPart}@${gatewayDomain}`;
+    chunks.forEach(chunk => {
+      MailApp.sendEmail({ to, subject: SMS_EMAIL_SUBJECT, body: chunk });
+    });
+  });
+
+  Logger.info('Sent internet alert via SMS in ' + chunks.length + ' segments');
+}
+
 // --------------- Spreadsheet Helpers ---------------
 
 function addSheetToSpreadsheet(spreadSheet, sheetData, autosize) {
@@ -702,4 +817,3 @@ function getFilesInTarGz(tarGzFile) {
     });
   return [].concat(...foundFilesArr);
 }
-
