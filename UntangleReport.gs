@@ -42,10 +42,7 @@ function sendReport() {
     hostsByCategoryData
   ] = getQueryData();
 
-  // write the severity=0 file here, so we only compute once
   generateSeverityZeroFile(hostsByCategoryData.content);
-
-  return
 
   const searchDataUniq = dedupeSearchData(searchData);
   const htmlReportData = [searchDataUniq, tempUnblockedData];
@@ -817,3 +814,4 @@ function getFilesInTarGz(tarGzFile) {
     });
   return [].concat(...foundFilesArr);
 }
+
