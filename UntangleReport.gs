@@ -3,13 +3,13 @@ const NETWORK_NAME = '<Your network name>';
 const REPORT_RECIPIENTS = "<Your list of email recipients>";
 
 const SMS_GATEWAY_RECIPIENTS = [
-  '7039159886@vtext.com', '4439802053@vtext.com'
+  <your list of phone email recipients>
 ];
 const TEXT_GATEWAY_EMAIL_MAP = {
   'mypixmessages.com': 'vtext.com'
 };
 const SMS_CATEGORIES = new Set([
-    'Cult and Occult', 'Abused Drugs', 'Adult and Pornography', 'Dating', 'Sex Education', 'Gambling', 'Translation', 'Marijuana', 'Hacking', 'Weapons', 'Swimsuits and Intimate Apparel', 'Questionable', 'Hate and Racism', 'Violence', 'Cheating', 'Gross', 'Nudity', 'Illegal', 'Abortion', 'Parked Domains', 'Alcohol and Tobacco', 'Image and Video Search', 'Self Harm', 'Low-THC Cannabis Products', 'Fashion and Beauty'
+    'Cult and Occult', 'Abused Drugs', 'Adult and Pornography', 'Dating', 'Sex Education', 'Gambling', 'Translation', 'Marijuana', 'Hacking', 'Weapons', 'Swimsuits and Intimate Apparel', 'Questionable', 'Hate and Racism', 'Violence', 'Cheating', 'Gross', 'Nudity', 'Illegal', 'Abortion', 'Alcohol and Tobacco', 'Image and Video Search', 'Self Harm', 'Low-THC Cannabis Products', 'Fashion and Beauty'
   ]);
 const SMS_EMAIL_SUBJECT = 'Internet Alert';
 const SMS_ALERT_FILENAME = 'internet_sms_report.txt';
@@ -560,8 +560,8 @@ function generateSeverityZeroFile(hostsByCategoryData) {
   const categoryMap = {};
 
   rows
-    .filter(([severity, categoryName]) =>
-      severity === 0 && SMS_CATEGORIES.has(categoryName)
+    .filter(([, categoryName]) =>
+      SMS_CATEGORIES.has(categoryName)
     )
     .forEach(([, categoryName, machineMap]) => {
       // Ensure category bucket exists
@@ -814,4 +814,3 @@ function getFilesInTarGz(tarGzFile) {
     });
   return [].concat(...foundFilesArr);
 }
-
