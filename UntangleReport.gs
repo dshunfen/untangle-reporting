@@ -14,6 +14,8 @@ const SMS_CATEGORIES = new Set([
 const SMS_EMAIL_SUBJECT = 'Internet Alert';
 const SMS_ALERT_FILENAME = 'internet_sms_report.txt';
 const SMS_MAX_CHARS = 140;
+// Domains (and their subdomains) that never trigger SMS alerts
+const SMS_IGNORED_DOMAINS = ['mudita.com'];
 
 const HIGH_SEVERITY_PARENT_CATEGORIES = ['Sensitive', 'Security'];
 const HIGH_SEVERITY_CHILDREN_CATEGORIES = ['Shopping', 'Uncategorized', 'Streaming Media', 'News and Media', 'Social Networking', 'Fashion and Beauty', 'Entertainment and Arts', 'Internet Portals'];
@@ -577,6 +579,7 @@ function generateSeverityZeroFile(hostsByCategoryData) {
 
         // Map each domain to its last-two labels
         Object.keys(domains).forEach(fullDomain => {
+          if (isSmsIgnoredDomain(fullDomain)) return;
           const parts = fullDomain.split('.');
           const primary = parts.slice(-2).join('.');
           categoryMap[categoryName][machine].add(primary);
@@ -586,14 +589,20 @@ function generateSeverityZeroFile(hostsByCategoryData) {
 
   const lines = [];
   Object.entries(categoryMap).forEach(([categoryName, machines]) => {
+    const machineEntries = Object.entries(machines).filter(([, domainSet]) => domainSet.size);
+    if (!machineEntries.length) return;
     lines.push(categoryName);
-    Object.entries(machines).forEach(([machine, domainSet]) => {
+    machineEntries.forEach(([machine, domainSet]) => {
       const domainList = Array.from(domainSet).join(', ');
       lines.push(`  ${machine} - ${domainList}`);
     });
   });
 
   reportFolder.createFile(SMS_ALERT_FILENAME, lines.join('\n'));
+}
+
+function isSmsIgnoredDomain(domain) {
+  return SMS_IGNORED_DOMAINS.some(ignored => domain === ignored || domain.endsWith('.' + ignored));
 }
 
 function sendSeverityZeroAlerts() {
